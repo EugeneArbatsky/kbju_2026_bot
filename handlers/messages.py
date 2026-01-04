@@ -1,12 +1,17 @@
 from telegram import Update
 from telegram.ext import CallbackContext
 import database
-import texts  # Импортируем наши тексты
+import texts
+from ai.service import AIService
+
+ai_service = AIService()
 
 async def handle_message(update: Update, context: CallbackContext):
-    """Обработчик всех текстовых сообщений - теперь сохраняем как запись о еде"""
+    """Обработчик всех текстовых сообщений - УПРОЩЕННАЯ ВЕРСИЯ"""
     user = update.effective_user
     user_message = update.message.text
+    
+    print(f"📩 Получено сообщение от {user.first_name}: '{user_message}'")
     
     # Сохраняем информацию о пользователе
     database.save_user(
@@ -20,15 +25,26 @@ async def handle_message(update: Update, context: CallbackContext):
     day_id, day_number = database.get_or_create_current_day(user.id)
     
     if not day_id:
-        await update.message.reply_text(
-            texts.DATABASE_ERROR_TEXT
-        )
+        await update.message.reply_text(texts.DATABASE_ERROR_TEXT)
         return
     
-    # Сохраняем сообщение как запись о еде
-    database.save_food_entry(user.id, day_id, user_message)
+    # Показываем статус "печатает"
+    await update.message.chat.send_action(action="typing")
     
-    # Отправляем ответ
-    await update.message.reply_text(
-        texts.get_food_entry_saved_text(day_number, user_message)
-    )
+    # Получаем анализ от AI (упрощённая версия)
+    dishes = await ai_service.analyze_food_text(user_message)
+    
+    if not dishes:
+        await update.message.reply_text(texts.AI_ERROR_TEXT)
+        return
+    
+    print(f"🍽️  Сохраняю {len(dishes)} блюд в базу...")
+    
+    # Сохраняем блюда в базу
+    saved_ids = database.save_food_entries(user_id=user.id, day_id=day_id, dishes=dishes)
+    
+    print(f"✅ Сохранено {len(saved_ids)} записей, IDs: {saved_ids}")
+    
+    # Формируем ответ
+    response = texts.get_food_entries_saved_text(day_number, dishes)
+    await update.message.reply_text(response)

@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import CallbackContext
 import database
-import texts  # Импортируем наши тексты
+import texts
 
 async def start(update: Update, context: CallbackContext):
     """Обработчик команды /start"""
@@ -31,7 +31,7 @@ async def nextday_command(update: Update, context: CallbackContext):
         )
 
 async def dayresult_command(update: Update, context: CallbackContext):
-    """Показать записи за текущий день"""
+    """Показать записи и итоги за текущий день"""
     user = update.effective_user
     
     # Получаем текущий день
@@ -46,19 +46,9 @@ async def dayresult_command(update: Update, context: CallbackContext):
     # Получаем записи о еде за этот день
     entries = database.get_food_entries_for_day(user.id, day_id)
     
-    if not entries:
-        await update.message.reply_text(
-            texts.get_dayresult_no_entries_text(day_number)
-        )
-        return
+    # Получаем итоги за день
+    totals = database.get_day_totals(user.id, day_id)
     
-    # Формируем ответ в нужном формате
-    response = texts.get_dayresult_header(day_number)
-    
-    for entry_id, message_text, calories, protein, fat, carbs in entries:
-        response += texts.format_food_entry(
-            entry_id, message_text, calories, protein, fat, carbs
-        )
-        response += "\n"  # Добавляем пустую строку между записями
-    
+    # Формируем ответ
+    response = texts.get_dayresult_text(day_number, entries, totals)
     await update.message.reply_html(response)

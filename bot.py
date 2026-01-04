@@ -1,4 +1,5 @@
 import os
+import asyncio
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from dotenv import load_dotenv
 
@@ -26,8 +27,8 @@ if not TOKEN:
 
 print(texts.get_token_loaded_text(TOKEN[:10]))
 
-def main():
-    """Запуск бота"""
+async def main():
+    """Асинхронный запуск бота"""
     print(texts.BOT_START_HEADER)
     print(texts.BOT_START_TITLE)
     print(texts.BOT_START_FOOTER)
@@ -47,9 +48,22 @@ def main():
     print(texts.BOT_STARTED_TEXT)
     
     try:
-        app.run_polling()
+        # Запускаем бота
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling(allowed_updates=None)
+        
+        # Бесконечный цикл
+        await asyncio.Event().wait()
+        
     except Exception as e:
         print(texts.BOT_ERROR_TEXT.format(error=e))
+    finally:
+        # Корректное завершение
+        if 'app' in locals():
+            await app.stop()
+            await app.shutdown()
 
 if __name__ == '__main__':
-    main()
+    # Запускаем асинхронную функцию
+    asyncio.run(main())

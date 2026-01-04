@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, date
+from datetime import datetime
 import os
 
 # Путь к файлу базы данных
@@ -11,7 +11,7 @@ def init_database():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Таблица пользователей (оставляем как есть)
+        # Таблица пользователей
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
@@ -34,31 +34,25 @@ def init_database():
             )
         ''')
         
-        # Таблица записей о еде (вместо messages)
+        # Таблица записей о еде (ОБНОВЛЕНА - теперь храним реальные значения)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS food_entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER,
                 day_id INTEGER,
-                message_text TEXT,
-                calories REAL DEFAULT 400,
-                protein REAL DEFAULT 10,
-                fat REAL DEFAULT 10,
-                carbs REAL DEFAULT 10,
+                dish_name TEXT NOT NULL,
+                calories INTEGER DEFAULT 400,
+                protein INTEGER DEFAULT 10,
+                fat INTEGER DEFAULT 10,
+                carbs INTEGER DEFAULT 10,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (day_id) REFERENCES days (id)
             )
         ''')
         
-        # Старая таблица messages (оставим для обратной совместимости)
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                message_text TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
+        # Индексы для быстрого поиска
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_day ON food_entries(user_id, day_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_day ON food_entries(day_id)')
         
         conn.commit()
         print(f"✅ База данных инициализирована: {DB_PATH}")
@@ -75,10 +69,8 @@ def save_user(user_id, username, first_name, last_name):
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Проверяем, существует ли пользователь
         cursor.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
         if not cursor.fetchone():
-            # Добавляем нового пользователя
             cursor.execute('''
                 INSERT INTO users (user_id, username, first_name, last_name)
                 VALUES (?, ?, ?, ?)
@@ -105,7 +97,6 @@ def get_or_create_current_day(user_id):
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Ищем текущий день
         cursor.execute('''
             SELECT id, day_number FROM days 
             WHERE user_id = ? AND is_current = 1
@@ -114,7 +105,6 @@ def get_or_create_current_day(user_id):
         day = cursor.fetchone()
         
         if not day:
-            # Если нет текущего дня, создаем первый
             cursor.execute('''
                 INSERT INTO days (user_id, day_number, is_current)
                 VALUES (?, 1, 1)
@@ -139,7 +129,6 @@ def create_next_day(user_id):
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Получаем текущий день
         cursor.execute('''
             SELECT id, day_number FROM days 
             WHERE user_id = ? AND is_current = 1
@@ -148,7 +137,6 @@ def create_next_day(user_id):
         current_day = cursor.fetchone()
         
         if not current_day:
-            # Если нет дней, создаем первый
             cursor.execute('''
                 INSERT INTO days (user_id, day_number, is_current)
                 VALUES (?, 1, 1)
@@ -158,13 +146,11 @@ def create_next_day(user_id):
         else:
             current_day_id, current_day_number = current_day
             
-            # Снимаем флаг текущего дня с предыдущего
             cursor.execute('''
                 UPDATE days SET is_current = 0 
                 WHERE id = ?
             ''', (current_day_id,))
             
-            # Создаем новый день
             new_day_number = current_day_number + 1
             cursor.execute('''
                 INSERT INTO days (user_id, day_number, is_current)
@@ -183,22 +169,30 @@ def create_next_day(user_id):
         if conn:
             conn.close()
 
-def save_food_entry(user_id, day_id, message_text):
-    """Сохранение записи о еде"""
+def save_food_entries(user_id, day_id, dishes):
+    """Сохраняет несколько записей о еде за один раз"""
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        cursor.execute('''
-            INSERT INTO food_entries (user_id, day_id, message_text)
-            VALUES (?, ?, ?)
-        ''', (user_id, day_id, message_text))
+        saved_ids = []
+        for dish in dishes:
+            cursor.execute('''
+                INSERT INTO food_entries 
+                (user_id, day_id, dish_name, calories, protein, fat, carbs)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                user_id, day_id, 
+                dish['name'], dish['calories'], 
+                dish['protein'], dish['fat'], dish['carbs']
+            ))
+            saved_ids.append(cursor.lastrowid)
         
         conn.commit()
-        return True
+        return saved_ids
     except sqlite3.Error as e:
-        print(f"❌ Ошибка при сохранении записи о еде: {e}")
-        return False
+        print(f"❌ Ошибка при сохранении записей о еде: {e}")
+        return []
     finally:
         if conn:
             conn.close()
@@ -210,7 +204,7 @@ def get_food_entries_for_day(user_id, day_id):
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT id, message_text, calories, protein, fat, carbs
+            SELECT id, dish_name, calories, protein, fat, carbs
             FROM food_entries 
             WHERE user_id = ? AND day_id = ?
             ORDER BY created_at
@@ -225,53 +219,55 @@ def get_food_entries_for_day(user_id, day_id):
         if conn:
             conn.close()
 
-# Для обратной совместимости оставим старые функции
-def save_message(user_id, message_text):
-    return save_food_entry(user_id, 1, message_text)  # Просто для совместимости
-
-def get_user_messages(user_id, limit=10):
-    """Получение последних сообщений пользователя (для обратной совместимости)"""
+def get_day_totals(user_id, day_id):
+    """Получение суммарных КБЖУ за день"""
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT message_text, created_at 
+            SELECT 
+                SUM(calories) as total_calories,
+                SUM(protein) as total_protein,
+                SUM(fat) as total_fat,
+                SUM(carbs) as total_carbs,
+                COUNT(*) as count
             FROM food_entries 
-            WHERE user_id = ? 
-            ORDER BY created_at DESC 
-            LIMIT ?
-        ''', (user_id, limit))
+            WHERE user_id = ? AND day_id = ?
+        ''', (user_id, day_id))
         
-        messages = cursor.fetchall()
-        return messages
+        result = cursor.fetchone()
+        if result and result[0] is not None:
+            return {
+                'calories': round(result[0]),
+                'protein': round(result[1]),
+                'fat': round(result[2]),
+                'carbs': round(result[3]),
+                'count': result[4]
+            }
+        else:
+            return {
+                'calories': 0,
+                'protein': 0,
+                'fat': 0,
+                'carbs': 0,
+                'count': 0
+            }
     except sqlite3.Error as e:
-        print(f"❌ Ошибка при получении сообщений: {e}")
-        return []
-
-def get_message_stats(user_id):
-    """Получение статистики по сообщениям"""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        
-        cursor.execute('SELECT COUNT(*) FROM food_entries WHERE user_id = ?', (user_id,))
-        total = cursor.fetchone()[0]
-        
-        cursor.execute('SELECT MIN(created_at) FROM food_entries WHERE user_id = ?', (user_id,))
-        first_date = cursor.fetchone()[0]
-        
-        cursor.execute('SELECT MAX(created_at) FROM food_entries WHERE user_id = ?', (user_id,))
-        last_date = cursor.fetchone()[0]
-        
-        return {
-            'total_messages': total,
-            'first_message': first_date,
-            'last_message': last_date
-        }
-    except sqlite3.Error as e:
-        print(f"❌ Ошибка при получении статистики: {e}")
+        print(f"❌ Ошибка при получении суммарных КБЖУ: {e}")
         return {}
+    finally:
+        if conn:
+            conn.close()
 
-# Автоматически инициализируем базу данных при импорте
+# Для обратной совместимости
+def save_message(user_id, message_text):
+    """Совместимость со старой версией"""
+    day_id, _ = get_or_create_current_day(user_id)
+    if day_id:
+        dishes = [{'name': message_text, 'calories': 400, 'protein': 10, 'fat': 10, 'carbs': 10}]
+        save_food_entries(user_id, day_id, dishes)
+        return True
+    return False
+
 init_database()
