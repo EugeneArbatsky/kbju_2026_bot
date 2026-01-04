@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import CallbackContext
 import database
+import texts  # Импортируем наши тексты
 
 async def handle_message(update: Update, context: CallbackContext):
     """Обработчик всех текстовых сообщений - теперь сохраняем как запись о еде"""
@@ -20,19 +21,14 @@ async def handle_message(update: Update, context: CallbackContext):
     
     if not day_id:
         await update.message.reply_text(
-            "❌ Ошибка: не удалось получить текущий день."
+            texts.DATABASE_ERROR_TEXT
         )
         return
     
     # Сохраняем сообщение как запись о еде
     database.save_food_entry(user.id, day_id, user_message)
     
-    # Формируем ответ в нужном формате
-    response = (
-        f"✅ Сообщение сохранено в День {day_number}!\n\n"
-        f"📝 {user_message}\n"
-        f"400 ккал, 10 белков, 10 жиров, 10 углеводов\n\n"
-        f"💡 Используйте /dayresult чтобы посмотреть все записи за день"
+    # Отправляем ответ
+    await update.message.reply_text(
+        texts.get_food_entry_saved_text(day_number, user_message)
     )
-    
-    await update.message.reply_text(response)
