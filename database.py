@@ -1,6 +1,4 @@
 import sqlite3
-from datetime import datetime
-import os
 
 # Путь к файлу базы данных
 DB_PATH = "kbju_bot.db"
@@ -34,7 +32,7 @@ def init_database():
             )
         ''')
         
-        # Таблица записей о еде (ОБНОВЛЕНА - теперь храним реальные значения)
+        # Таблица записей о еде
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS food_entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -259,15 +257,5 @@ def get_day_totals(user_id, day_id):
     finally:
         if conn:
             conn.close()
-
-# Для обратной совместимости
-def save_message(user_id, message_text):
-    """Совместимость со старой версией"""
-    day_id, _ = get_or_create_current_day(user_id)
-    if day_id:
-        dishes = [{'name': message_text, 'calories': 400, 'protein': 10, 'fat': 10, 'carbs': 10}]
-        save_food_entries(user_id, day_id, dishes)
-        return True
-    return False
 
 init_database()
