@@ -26,12 +26,13 @@ HELP_TEXT = """
 def get_processing_text() -> str:
     return "🧠 Анализирую ваше сообщение..."
 
-def get_food_entries_saved_text(day_number: int, dishes: list) -> str:
-    """Форматирует текст о сохраненных блюдах"""
+def get_food_entries_saved_text(day_number: int, dishes: list, start_index: int = 0) -> str:
+    """Форматирует текст о сохраненных блюдах с сквозной нумерацией"""
     response = f"✅ Сохранено в День {day_number}!\n\n"
     
     for i, dish in enumerate(dishes, 1):
-        response += f"{i}. {dish['name']}\n"
+        dish_number = start_index + i
+        response += f"{dish_number}. {dish['name']}\n"
         response += f"{dish['calories']} ккал, {dish['protein']} белков, {dish['fat']} жиров, {dish['carbs']} углеводов\n\n"
     
     response += "💡 Используйте /dayresult чтобы посмотреть все записи за день"
@@ -62,8 +63,8 @@ def get_dayresult_text(day_number: int, entries: list, totals: dict) -> str:
     """Форматирует записи за день с итогами"""
     response = f"📊 <b>День {day_number}</b>\n\n"
     
-    for entry_id, dish_name, calories, protein, fat, carbs in entries:
-        response += f"{entry_id}. {dish_name}\n"
+    for i, (entry_id, dish_name, calories, protein, fat, carbs) in enumerate(entries, 1):
+        response += f"{i}. {dish_name}\n"
         response += f"{calories} ккал, {protein} белков, {fat} жиров, {carbs} углеводов\n\n"
     
     if totals['count'] > 0:

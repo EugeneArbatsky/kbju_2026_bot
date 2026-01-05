@@ -195,6 +195,26 @@ def save_food_entries(user_id, day_id, dishes):
         if conn:
             conn.close()
 
+def count_food_entries_for_day(user_id, day_id):
+    """Подсчет количества записей о еде за день"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT COUNT(*) FROM food_entries 
+            WHERE user_id = ? AND day_id = ?
+        ''', (user_id, day_id))
+        
+        count = cursor.fetchone()[0]
+        return count
+    except sqlite3.Error as e:
+        print(f"❌ Ошибка при подсчете записей о еде: {e}")
+        return 0
+    finally:
+        if conn:
+            conn.close()
+
 def get_food_entries_for_day(user_id, day_id):
     """Получение записей о еде за день"""
     try:

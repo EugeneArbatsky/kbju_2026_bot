@@ -40,11 +40,14 @@ async def handle_message(update: Update, context: CallbackContext):
     
     print(f"🍽️  Сохраняю {len(dishes)} блюд в базу...")
     
+    # Получаем количество уже сохраненных блюд за день (для сквозной нумерации)
+    existing_count = database.count_food_entries_for_day(user.id, day_id)
+    
     # Сохраняем блюда в базу
     saved_ids = database.save_food_entries(user_id=user.id, day_id=day_id, dishes=dishes)
     
     print(f"✅ Сохранено {len(saved_ids)} записей, IDs: {saved_ids}")
     
-    # Формируем ответ
-    response = texts.get_food_entries_saved_text(day_number, dishes)
+    # Формируем ответ с учетом сквозной нумерации
+    response = texts.get_food_entries_saved_text(day_number, dishes, start_index=existing_count)
     await update.message.reply_text(response)
