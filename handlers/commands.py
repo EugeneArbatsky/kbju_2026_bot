@@ -52,3 +52,37 @@ async def dayresult_command(update: Update, context: CallbackContext):
     # Формируем ответ
     response = texts.get_dayresult_text(day_number, entries, totals)
     await update.message.reply_html(response)
+
+async def timezone_command(update: Update, context: CallbackContext):
+    """Установить часовой пояс пользователя"""
+    user = update.effective_user
+    
+    if not context.args:
+        # Показываем текущий часовой пояс и инструкцию
+        current_tz = database.get_user_timezone(user.id)
+        await update.message.reply_text(
+            texts.get_timezone_info_text(current_tz)
+        )
+        return
+    
+    timezone_str = ' '.join(context.args)
+    
+    # Проверяем валидность часового пояса
+    import pytz
+    try:
+        pytz.timezone(timezone_str)
+    except pytz.exceptions.UnknownTimeZoneError:
+        await update.message.reply_text(
+            texts.TIMEZONE_INVALID_TEXT
+        )
+        return
+    
+    # Устанавливаем часовой пояс
+    if database.set_user_timezone(user.id, timezone_str):
+        await update.message.reply_text(
+            texts.get_timezone_set_text(timezone_str)
+        )
+    else:
+        await update.message.reply_text(
+            texts.TIMEZONE_ERROR_TEXT
+        )

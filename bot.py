@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 # Импортируем обработчики из наших модулей
 from handlers.commands import (
-    start, help_command, nextday_command, dayresult_command
+    start, help_command, nextday_command, dayresult_command, timezone_command
 )
 from handlers.messages import handle_message
 
@@ -41,6 +41,7 @@ async def main():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("nextday", nextday_command))
     app.add_handler(CommandHandler("dayresult", dayresult_command))
+    app.add_handler(CommandHandler("timezone", timezone_command))
     
     # Обработчик для всех текстовых сообщений, КРОМЕ команд
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

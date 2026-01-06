@@ -14,6 +14,10 @@ from .telegram_texts import (
     get_dayresult_no_entries_text,
     DAYRESULT_ERROR_TEXT,
     get_dayresult_text,
+    get_timezone_info_text,
+    get_timezone_set_text,
+    TIMEZONE_INVALID_TEXT,
+    TIMEZONE_ERROR_TEXT,
     DATABASE_ERROR_TEXT,
 )
 

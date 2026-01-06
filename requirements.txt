@@ -13,4 +13,5 @@ multidict==6.7.0
 propcache==0.4.1
 python-dotenv==1.2.1
 python-telegram-bot==22.5
+pytz==2024.1
 yarl==1.22.0
