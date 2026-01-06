@@ -33,12 +33,24 @@ def get_food_entries_saved_text(day_number: int, dishes: list, start_index: int 
     """Форматирует текст о сохраненных блюдах с сквозной нумерацией"""
     response = f"✅ Сохранено в День {day_number}!\n\n"
     
+    # Считаем суммы для итогов
+    total_calories = 0
+    total_protein = 0
+    total_fat = 0
+    total_carbs = 0
+    
     for i, dish in enumerate(dishes, 1):
         dish_number = start_index + i
         response += f"{dish_number}. {dish['name']}\n"
         response += f"{dish['calories']} ккал, {dish['protein']} белков, {dish['fat']} жиров, {dish['carbs']} углеводов\n\n"
+        
+        # Суммируем значения
+        total_calories += dish['calories']
+        total_protein += dish['protein']
+        total_fat += dish['fat']
+        total_carbs += dish['carbs']
     
-    response += "💡 Используйте /dayresult чтобы посмотреть все записи за день"
+    response += f"Всего:\n{total_calories} ккал, {total_protein} белков, {total_fat} жиров, {total_carbs} углеводов"
     return response
 
 AI_ERROR_TEXT = "❌ Не удалось обработать запрос. Использую приблизительные значения."
