@@ -2,7 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 import database
 import texts
-from handlers.messages import create_edit_delete_buttons, create_cancel_button
+from handlers.messages import create_edit_delete_buttons, create_cancel_button, delete_dayresult_messages
 
 async def handle_callback(update: Update, context: CallbackContext):
     """Обработчик callback кнопок"""
@@ -64,8 +64,62 @@ async def handle_callback(update: Update, context: CallbackContext):
                 print(f"❌ Неверный формат callback_data: {data}, parts = {parts}")
         
         elif data.startswith("delete_"):
-            # Обработка кнопки "Удалить" - пока не реализовано
-            await query.message.reply_text("Функционал удаления будет реализован позже.")
+            # Обработка кнопки "Удалить"
+            # Формат: delete_1,2,3_dayid
+            parts = data.split("_")
+            print(f"🗑️  Парсинг callback удаления: parts = {parts}")
+            
+            if len(parts) >= 3:
+                entry_ids_str = parts[1]  # "1,2,3"
+                day_id = int(parts[2])
+                
+                print(f"🗑️  entry_ids_str = {entry_ids_str}, day_id = {day_id}")
+                
+                # Парсим список entry_ids
+                entry_ids = [int(x) for x in entry_ids_str.split(',')]
+                print(f"🗑️  entry_ids = {entry_ids}")
+                
+                # Проверяем, что все записи существуют и принадлежат пользователю
+                for entry_id in entry_ids:
+                    entry = database.get_food_entry_by_id(entry_id, user.id)
+                    if not entry:
+                        print(f"⚠️  Запись {entry_id} не найдена для пользователя {user.id}")
+                        await query.message.reply_text(texts.DELETE_NOT_FOUND_TEXT)
+                        return
+                
+                # Сохраняем chat_id перед удалением сообщения
+                chat_id = query.message.chat.id
+                
+                # Удаляем записи из базы данных
+                success = database.delete_food_entries(entry_ids, user.id)
+                
+                if not success:
+                    print(f"❌ Не удалось удалить записи {entry_ids}")
+                    await query.message.reply_text(texts.DELETE_ERROR_TEXT)
+                    return
+                
+                # Удаляем сообщение с отчетом о приеме пищи
+                try:
+                    await context.bot.delete_message(
+                        chat_id=chat_id,
+                        message_id=query.message.message_id
+                    )
+                except Exception as e:
+                    print(f"⚠️  Не удалось удалить сообщение с отчетом: {e}")
+                
+                # Удаляем сообщения /dayresult (так как они становятся неактуальными)
+                await delete_dayresult_messages(update, context, user.id)
+                
+                # Отправляем сообщение об успешном удалении
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=texts.DELETE_SUCCESS_TEXT
+                )
+                
+                print(f"✅ Успешно удалены записи {entry_ids} для пользователя {user.id}")
+            else:
+                print(f"❌ Неверный формат callback_data для удаления: {data}, parts = {parts}")
+                await query.message.reply_text(texts.DELETE_ERROR_TEXT)
         
         elif data == "cancel_edit":
             # Отмена редактирования

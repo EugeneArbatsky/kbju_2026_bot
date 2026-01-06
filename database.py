@@ -493,4 +493,44 @@ def is_day_current(user_id, day_id):
         if conn:
             conn.close()
 
+def delete_food_entries(entry_ids, user_id):
+    """Удаляет записи о еде по списку ID с проверкой пользователя"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Проверяем, что все записи принадлежат пользователю
+        placeholders = ','.join('?' * len(entry_ids))
+        cursor.execute(f'''
+            SELECT COUNT(*) FROM food_entries 
+            WHERE id IN ({placeholders}) AND user_id = ?
+        ''', (*entry_ids, user_id))
+        
+        count = cursor.fetchone()[0]
+        if count != len(entry_ids):
+            print(f"⚠️  Не все записи найдены или принадлежат пользователю {user_id}")
+            return False
+        
+        # Удаляем записи
+        cursor.execute(f'''
+            DELETE FROM food_entries 
+            WHERE id IN ({placeholders}) AND user_id = ?
+        ''', (*entry_ids, user_id))
+        
+        conn.commit()
+        deleted_count = cursor.rowcount
+        
+        if deleted_count == len(entry_ids):
+            print(f"✅ Удалено {deleted_count} записей о еде")
+            return True
+        else:
+            print(f"⚠️  Удалено {deleted_count} из {len(entry_ids)} записей")
+            return False
+    except sqlite3.Error as e:
+        print(f"❌ Ошибка при удалении записей о еде: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 init_database()

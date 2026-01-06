@@ -26,6 +26,9 @@ from .telegram_texts import (
     EDIT_NOT_CURRENT_DAY_TEXT,
     EDIT_NOT_FOUND_TEXT,
     EDIT_UPDATED_SUFFIX,
+    DELETE_SUCCESS_TEXT,
+    DELETE_ERROR_TEXT,
+    DELETE_NOT_FOUND_TEXT,
 )
 
 from .terminal_texts import (
