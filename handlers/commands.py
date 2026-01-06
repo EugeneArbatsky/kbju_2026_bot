@@ -49,9 +49,20 @@ async def dayresult_command(update: Update, context: CallbackContext):
     # Получаем итоги за день
     totals = database.get_day_totals(user.id, day_id)
     
+    # Сохраняем ID сообщения команды /dayresult для возможного удаления
+    command_message_id = update.message.message_id
+    if 'dayresult_message_ids' not in context.user_data:
+        context.user_data['dayresult_message_ids'] = []
+    context.user_data['dayresult_message_ids'].append(command_message_id)
+    
     # Формируем ответ
     response = texts.get_dayresult_text(day_number, entries, totals)
-    await update.message.reply_html(response)
+    
+    # Отправляем ответ и сохраняем его ID
+    # Для команды /dayresult не добавляем кнопки редактирования,
+    # так как это общий отчет за день, а не отдельный прием пищи
+    sent_message = await update.message.reply_html(response)
+    context.user_data['dayresult_message_ids'].append(sent_message.message_id)
 
 async def timezone_command(update: Update, context: CallbackContext):
     """Установить часовой пояс пользователя"""

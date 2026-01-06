@@ -19,6 +19,13 @@ from .telegram_texts import (
     TIMEZONE_INVALID_TEXT,
     TIMEZONE_ERROR_TEXT,
     DATABASE_ERROR_TEXT,
+    EDIT_PROMPT_TEXT,
+    EDIT_SUCCESS_TEXT,
+    EDIT_CANCEL_TEXT,
+    EDIT_ERROR_TEXT,
+    EDIT_NOT_CURRENT_DAY_TEXT,
+    EDIT_NOT_FOUND_TEXT,
+    EDIT_UPDATED_SUFFIX,
 )
 
 from .terminal_texts import (

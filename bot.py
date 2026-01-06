@@ -8,6 +8,7 @@ from handlers.commands import (
     start, help_command, nextday_command, dayresult_command, timezone_command
 )
 from handlers.messages import handle_message
+from handlers.callbacks import handle_callback
 
 # Импортируем тексты
 import texts
@@ -42,6 +43,10 @@ async def main():
     app.add_handler(CommandHandler("nextday", nextday_command))
     app.add_handler(CommandHandler("dayresult", dayresult_command))
     app.add_handler(CommandHandler("timezone", timezone_command))
+    
+    # Обработчик callback кнопок (должен быть перед обработчиком сообщений)
+    from telegram.ext import CallbackQueryHandler
+    app.add_handler(CallbackQueryHandler(handle_callback))
     
     # Обработчик для всех текстовых сообщений, КРОМЕ команд
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

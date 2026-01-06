@@ -417,4 +417,80 @@ def get_day_totals(user_id, day_id):
         if conn:
             conn.close()
 
+def get_food_entry_by_id(entry_id, user_id):
+    """Получение записи о еде по ID с проверкой пользователя"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, user_id, day_id, dish_name, calories, protein, fat, carbs
+            FROM food_entries 
+            WHERE id = ? AND user_id = ?
+        ''', (entry_id, user_id))
+        
+        entry = cursor.fetchone()
+        if entry:
+            return {
+                'id': entry[0],
+                'user_id': entry[1],
+                'day_id': entry[2],
+                'name': entry[3],
+                'calories': entry[4],
+                'protein': entry[5],
+                'fat': entry[6],
+                'carbs': entry[7]
+            }
+        return None
+    except sqlite3.Error as e:
+        print(f"❌ Ошибка при получении записи о еде: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+def update_food_entry(entry_id, user_id, dish_name, calories, protein, fat, carbs):
+    """Обновление записи о еде"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE food_entries 
+            SET dish_name = ?, calories = ?, protein = ?, fat = ?, carbs = ?
+            WHERE id = ? AND user_id = ?
+        ''', (dish_name, calories, protein, fat, carbs, entry_id, user_id))
+        
+        if cursor.rowcount == 0:
+            return False
+        
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"❌ Ошибка при обновлении записи о еде: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def is_day_current(user_id, day_id):
+    """Проверяет, является ли день текущим для пользователя"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT is_current FROM days 
+            WHERE id = ? AND user_id = ?
+        ''', (day_id, user_id))
+        
+        result = cursor.fetchone()
+        return result and result[0] == 1
+    except sqlite3.Error as e:
+        print(f"❌ Ошибка при проверке текущего дня: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 init_database()
