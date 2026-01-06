@@ -1,8 +1,17 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+"""
+Обработчики callback кнопок.
+"""
+
+from telegram import Update
 from telegram.ext import CallbackContext
 import database
 import texts
 from handlers.messages import create_edit_delete_buttons, create_cancel_button, delete_dayresult_messages
+from sessions import SessionManager, SessionType
+from services.food_service import FoodService
+
+food_service = FoodService()
+
 
 async def handle_callback(update: Update, context: CallbackContext):
     """Обработчик callback кнопок"""
@@ -48,10 +57,16 @@ async def handle_callback(update: Update, context: CallbackContext):
                         await query.message.reply_text(texts.EDIT_NOT_FOUND_TEXT)
                         return
                 
-                # Сохраняем информацию о редактировании в user_data
-                context.user_data['editing_entry_ids'] = entry_ids
-                context.user_data['editing_message_id'] = query.message.message_id
-                context.user_data['editing_day_id'] = day_id
+                # Устанавливаем сессию редактирования
+                SessionManager.set_session(
+                    context,
+                    SessionType.EDITING,
+                    {
+                        'editing_entry_ids': entry_ids,
+                        'editing_message_id': query.message.message_id,
+                        'editing_day_id': day_id
+                    }
+                )
                 
                 print(f"✅ Сессия редактирования начата: entry_ids={entry_ids}, message_id={query.message.message_id}")
                 
@@ -90,8 +105,8 @@ async def handle_callback(update: Update, context: CallbackContext):
                 # Сохраняем chat_id перед удалением сообщения
                 chat_id = query.message.chat.id
                 
-                # Удаляем записи из базы данных
-                success = database.delete_food_entries(entry_ids, user.id)
+                # Удаляем записи через сервис
+                success = food_service.delete_food_entries(user.id, entry_ids)
                 
                 if not success:
                     print(f"❌ Не удалось удалить записи {entry_ids}")
@@ -134,10 +149,8 @@ async def handle_callback(update: Update, context: CallbackContext):
                 except Exception as e:
                     print(f"⚠️  Не удалось удалить сообщение с инструкцией: {e}")
             
-            context.user_data.pop('editing_entry_ids', None)
-            context.user_data.pop('editing_message_id', None)
-            context.user_data.pop('editing_day_id', None)
-            context.user_data.pop('editing_prompt_message_id', None)
+            # Очищаем сессию редактирования
+            SessionManager.clear_session(context)
             await query.message.reply_text(texts.EDIT_CANCEL_TEXT)
         else:
             print(f"⚠️  Неизвестный callback_data: {data}")

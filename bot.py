@@ -9,6 +9,7 @@ from handlers.commands import (
 )
 from handlers.messages import handle_message
 from handlers.callbacks import handle_callback
+from handlers.media import handle_photo, handle_voice
 
 # Импортируем тексты
 import texts
@@ -50,6 +51,10 @@ async def main():
     
     # Обработчик для всех текстовых сообщений, КРОМЕ команд
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    # Обработчики для фото и голосовых сообщений
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     
     print(texts.BOT_STARTED_TEXT)
     

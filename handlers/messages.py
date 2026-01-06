@@ -1,10 +1,21 @@
+"""
+Обработчики сообщений от пользователей.
+"""
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 import database
 import texts
-from ai.service import AIService
+from services.food_service import FoodService
+from services.user_service import UserService
+from services.day_service import DayService
+from sessions import SessionManager, SessionType
 
-ai_service = AIService()
+# Инициализируем сервисы
+food_service = FoodService()
+user_service = UserService()
+day_service = DayService()
+
 
 def create_edit_delete_buttons(entry_ids: list, day_id: int, is_current_day: bool = True) -> InlineKeyboardMarkup:
     """Создает кнопки 'Редактировать' и 'Удалить' для приема пищи (список блюд)"""
@@ -31,26 +42,42 @@ def create_edit_delete_buttons(entry_ids: list, day_id: int, is_current_day: boo
     ]
     return InlineKeyboardMarkup(keyboard)
 
+
 def create_cancel_button() -> InlineKeyboardMarkup:
     """Создает кнопку 'Отменить' для сессии редактирования"""
     keyboard = [[InlineKeyboardButton("Отменить", callback_data="cancel_edit")]]
     return InlineKeyboardMarkup(keyboard)
 
+
 async def handle_message(update: Update, context: CallbackContext):
-    """Обработчик всех текстовых сообщений"""
+    """
+    Главный обработчик всех текстовых сообщений.
+    Маршрутизирует сообщения к соответствующим сессиям.
+    """
+    user = update.effective_user
+    
+    # Получаем текущую сессию пользователя
+    session = SessionManager.get_session(context)
+    
+    # Передаем обработку сессии
+    handled = await session.handle_message(update, context)
+    
+    if not handled:
+        # Если сессия не обработала сообщение, отправляем сообщение об ошибке
+        await update.message.reply_text("Не удалось обработать сообщение. Попробуйте еще раз.")
+
+
+async def handle_food_message(update: Update, context: CallbackContext):
+    """
+    Обрабатывает сообщение о еде (используется в DefaultSession).
+    """
     user = update.effective_user
     user_message = update.message.text
     
     print(f"📩 Получено сообщение от {user.first_name}: '{user_message}'")
     
-    # Проверяем, находится ли пользователь в сессии редактирования
-    if 'editing_entry_ids' in context.user_data:
-        # Обрабатываем редактирование
-        await handle_edit_message(update, context)
-        return
-    
     # Сохраняем информацию о пользователе
-    database.save_user(
+    user_service.save_user(
         user_id=user.id,
         username=user.username,
         first_name=user.first_name,
@@ -58,7 +85,7 @@ async def handle_message(update: Update, context: CallbackContext):
     )
     
     # Получаем или создаем текущий день
-    day_id, day_number = database.get_or_create_current_day(user.id)
+    day_id, day_number = day_service.get_or_create_current_day(user.id)
     
     if not day_id:
         await update.message.reply_text(texts.DATABASE_ERROR_TEXT)
@@ -67,35 +94,35 @@ async def handle_message(update: Update, context: CallbackContext):
     # Показываем статус "печатает"
     await update.message.chat.send_action(action="typing")
     
-    # Получаем анализ от AI
-    dishes = await ai_service.analyze_food_text(user_message)
+    # Обрабатываем сообщение через сервис
+    dishes = await food_service.process_food_message(user.id, day_id, user_message)
     
     if not dishes:
         await update.message.reply_text(texts.AI_ERROR_TEXT)
         return
     
-    print(f"🍽️  Сохраняю {len(dishes)} блюд в базу...")
+    print(f"🍽️  Сохранено {len(dishes)} блюд в базу...")
     
     # Получаем количество уже сохраненных блюд за день (для сквозной нумерации)
     existing_count = database.count_food_entries_for_day(user.id, day_id)
     
-    # Сохраняем блюда в базу
-    saved_ids = database.save_food_entries(user_id=user.id, day_id=day_id, dishes=dishes)
-    
-    print(f"✅ Сохранено {len(saved_ids)} записей, IDs: {saved_ids}")
+    # Извлекаем ID сохраненных записей
+    saved_ids = [dish.get('id') for dish in dishes if dish.get('id')]
     
     # Формируем ответ с учетом сквозной нумерации
     response = texts.get_food_entries_saved_text(day_number, dishes, start_index=existing_count)
     
-    # Создаем кнопки для всего приема пищи (всех блюд из этого сообщения)
-    # Кнопки показываются всегда, независимо от того, текущий день или нет
+    # Создаем кнопки для всего приема пищи
     reply_markup = create_edit_delete_buttons(saved_ids, day_id)
     
     # Отправляем одно сообщение с отчетом и кнопками
     await update.message.reply_text(response, reply_markup=reply_markup)
 
+
 async def handle_edit_message(update: Update, context: CallbackContext):
-    """Обрабатывает сообщение в сессии редактирования"""
+    """
+    Обрабатывает сообщение в сессии редактирования (используется в EditingSession).
+    """
     user = update.effective_user
     user_message = update.message.text
     
@@ -104,46 +131,19 @@ async def handle_edit_message(update: Update, context: CallbackContext):
     day_id = context.user_data.get('editing_day_id')
     
     if not entry_ids or not day_id:
+        # Завершаем сессию редактирования если данных нет
+        SessionManager.clear_session(context)
         return
-    
-    # Получаем все оригинальные записи
-    original_entries = []
-    for entry_id in entry_ids:
-        entry = database.get_food_entry_by_id(entry_id, user.id)
-        if not entry:
-            await update.message.reply_text(texts.EDIT_NOT_FOUND_TEXT)
-            context.user_data.pop('editing_entry_ids', None)
-            context.user_data.pop('editing_message_id', None)
-            context.user_data.pop('editing_day_id', None)
-            return
-        original_entries.append(entry)
     
     # Показываем статус "печатает"
     await update.message.chat.send_action(action="typing")
     
-    # Обрабатываем редактирование через AI (весь прием пищи)
-    updated_dishes = await ai_service.process_edit_meal(original_entries, user_message)
+    # Обрабатываем редактирование через сервис
+    updated_dishes = await food_service.edit_food_entries(user.id, entry_ids, user_message)
     
-    if not updated_dishes or len(updated_dishes) != len(entry_ids):
+    if not updated_dishes:
         await update.message.reply_text(texts.EDIT_ERROR_TEXT)
         return
-    
-    # Обновляем все записи в базе данных
-    for i, entry_id in enumerate(entry_ids):
-        updated_dish = updated_dishes[i]
-        success = database.update_food_entry(
-            entry_id=entry_id,
-            user_id=user.id,
-            dish_name=updated_dish['name'],
-            calories=updated_dish['calories'],
-            protein=updated_dish['protein'],
-            fat=updated_dish['fat'],
-            carbs=updated_dish['carbs']
-        )
-        
-        if not success:
-            await update.message.reply_text(texts.EDIT_ERROR_TEXT)
-            return
     
     # Удаляем сообщение с инструкцией "Введите изменения или уточнения"
     prompt_message_id = context.user_data.get('editing_prompt_message_id')
@@ -160,11 +160,9 @@ async def handle_edit_message(update: Update, context: CallbackContext):
     await update.message.reply_text(texts.EDIT_SUCCESS_TEXT)
     
     # Формируем обновленный текст сообщения
-    # Получаем day_number для форматирования
-    day_number = database.get_or_create_current_day(user.id)[1]
+    day_id_current, day_number = day_service.get_or_create_current_day(user.id)
     
     # Получаем количество блюд до этих записей для правильной нумерации
-    # Подсчитываем количество записей до этой группы (записи отсортированы по created_at)
     all_entries = database.get_food_entries_for_day(user.id, day_id)
     start_index = 0
     for e in all_entries:
@@ -175,7 +173,7 @@ async def handle_edit_message(update: Update, context: CallbackContext):
     updated_text = texts.get_food_entries_saved_text(day_number, updated_dishes, start_index=start_index)
     updated_text += texts.EDIT_UPDATED_SUFFIX
     
-    # Кнопки показываются всегда, независимо от того, текущий день или нет
+    # Кнопки показываются всегда
     reply_markup = create_edit_delete_buttons(entry_ids, day_id)
     
     try:
@@ -192,14 +190,11 @@ async def handle_edit_message(update: Update, context: CallbackContext):
     await delete_dayresult_messages(update, context, user.id)
     
     # Завершаем сессию редактирования
-    context.user_data.pop('editing_entry_ids', None)
-    context.user_data.pop('editing_message_id', None)
-    context.user_data.pop('editing_day_id', None)
-    context.user_data.pop('editing_prompt_message_id', None)
+    SessionManager.clear_session(context)
+
 
 async def delete_dayresult_messages(update: Update, context: CallbackContext, user_id: int):
     """Удаляет все сообщения от бота на команду /dayresult для пользователя"""
-    # Храним ID сообщений /dayresult в user_data
     if 'dayresult_message_ids' in context.user_data:
         chat_id = update.effective_chat.id
         for msg_id in context.user_data['dayresult_message_ids']:
