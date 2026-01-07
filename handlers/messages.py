@@ -91,6 +91,9 @@ async def handle_food_message(update: Update, context: CallbackContext):
         await update.message.reply_text(texts.DATABASE_ERROR_TEXT)
         return
     
+    # Получаем количество уже сохраненных блюд за день ДО сохранения новых (для сквозной нумерации)
+    existing_count = database.count_food_entries_for_day(user.id, day_id)
+    
     # Показываем статус "печатает"
     await update.message.chat.send_action(action="typing")
     
@@ -102,9 +105,6 @@ async def handle_food_message(update: Update, context: CallbackContext):
         return
     
     print(f"🍽️  Сохранено {len(dishes)} блюд в базу...")
-    
-    # Получаем количество уже сохраненных блюд за день (для сквозной нумерации)
-    existing_count = database.count_food_entries_for_day(user.id, day_id)
     
     # Извлекаем ID сохраненных записей
     saved_ids = [dish.get('id') for dish in dishes if dish.get('id')]
