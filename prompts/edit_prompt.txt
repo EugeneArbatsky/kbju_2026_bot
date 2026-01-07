@@ -33,30 +33,32 @@
       "calories": число,
       "protein": число,
       "fat": число,
-      "carbs": число
+      "carbs": число,
+      "grams": число
     },
     {
       "name": "Обновленное название блюда 2",
       "calories": число,
       "protein": число,
       "fat": число,
-      "carbs": число
+      "carbs": число,
+      "grams": число
     }
   ]
 }
 
 ПРИМЕРЫ:
 
-Оригинальный прием пищи: {"dishes": [{"name": "Гречка", "calories": 110, "protein": 5, "fat": 1, "carbs": 25}, {"name": "Куриная грудка", "calories": 160, "protein": 30, "fat": 3, "carbs": 0}]}
+Оригинальный прием пищи: {"dishes": [{"name": "Гречка", "calories": 110, "protein": 5, "fat": 1, "carbs": 25, "grams": 100}, {"name": "Куриная грудка", "calories": 160, "protein": 30, "fat": 3, "carbs": 0, "grams": 150}]}
 Запрос пользователя: "Исправь, гречки было 2 порции"
-Ответ: {"dishes": [{"name": "Гречка", "calories": 220, "protein": 10, "fat": 2, "carbs": 50}, {"name": "Куриная грудка", "calories": 160, "protein": 30, "fat": 3, "carbs": 0}]}
+Ответ: {"dishes": [{"name": "Гречка", "calories": 220, "protein": 10, "fat": 2, "carbs": 50, "grams": 200}, {"name": "Куриная грудка", "calories": 160, "protein": 30, "fat": 3, "carbs": 0, "grams": 150}]}
 
-Оригинальный прием пищи: {"dishes": [{"name": "Пельмени", "calories": 400, "protein": 15, "fat": 20, "carbs": 45}]}
+Оригинальный прием пищи: {"dishes": [{"name": "Пельмени", "calories": 400, "protein": 15, "fat": 20, "carbs": 45, "grams": 200}]}
 Запрос пользователя: "Добавь майонез"
-Ответ: {"dishes": [{"name": "Пельмени с майонезом", "calories": 500, "protein": 15, "fat": 30, "carbs": 45}]}
+Ответ: {"dishes": [{"name": "Пельмени с майонезом", "calories": 500, "protein": 15, "fat": 30, "carbs": 45, "grams": 220}]}
 
-Оригинальный прием пищи: {"dishes": [{"name": "Яблоко", "calories": 100, "protein": 0, "fat": 0, "carbs": 25}, {"name": "Молоко", "calories": 150, "protein": 8, "fat": 5, "carbs": 12}]}
+Оригинальный прием пищи: {"dishes": [{"name": "Яблоко", "calories": 100, "protein": 0, "fat": 0, "carbs": 25, "grams": 100}, {"name": "Молоко", "calories": 150, "protein": 8, "fat": 5, "carbs": 12, "grams": 200}]}
 Запрос пользователя: "Было 3 яблока"
-Ответ: {"dishes": [{"name": "Яблоко", "calories": 300, "protein": 0, "fat": 0, "carbs": 75}, {"name": "Молоко", "calories": 150, "protein": 8, "fat": 5, "carbs": 12}]}
+Ответ: {"dishes": [{"name": "Яблоко", "calories": 300, "protein": 0, "fat": 0, "carbs": 75, "grams": 300}, {"name": "Молоко", "calories": 150, "protein": 8, "fat": 5, "carbs": 12, "grams": 200}]}
 
 ТЕПЕРЬ ОБРАБОТАЙ:

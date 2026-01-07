@@ -41,7 +41,7 @@ def get_food_entries_saved_text(day_number: int, dishes: list, start_index: int 
     
     for i, dish in enumerate(dishes, 1):
         dish_number = start_index + i
-        response += f"{dish_number}. {dish['name']}\n"
+        response += f"{dish_number}. {dish['name']} – {dish['grams']}г\n"
         response += f"{dish['calories']} ккал, {dish['protein']} белков, {dish['fat']} жиров, {dish['carbs']} углеводов\n\n"
         
         # Суммируем значения
@@ -78,8 +78,10 @@ def get_dayresult_text(day_number: int, entries: list, totals: dict) -> str:
     """Форматирует записи за день с итогами"""
     response = f"📊 <b>День {day_number}</b>\n\n"
     
-    for i, (entry_id, dish_name, calories, protein, fat, carbs) in enumerate(entries, 1):
-        response += f"{i}. {dish_name}\n"
+    for i, entry in enumerate(entries, 1):
+        entry_id, dish_name, calories, protein, fat, carbs, grams = entry
+        
+        response += f"{i}. {dish_name} – {grams}г\n"
         response += f"{calories} ккал, {protein} белков, {fat} жиров, {carbs} углеводов\n\n"
     
     if totals['count'] > 0:

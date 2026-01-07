@@ -220,19 +220,22 @@ class AIService:
                 protein = round(float(dish.get('protein', 10)))
                 fat = round(float(dish.get('fat', 10)))
                 carbs = round(float(dish.get('carbs', 40)))
+                grams = round(float(dish.get('grams', 100)))
                 
                 # Ограничиваем разумные пределы
                 calories = max(0, min(calories, 2000))
                 protein = max(0, min(protein, 100))
                 fat = max(0, min(fat, 100))
                 carbs = max(0, min(carbs, 200))
+                grams = max(1, min(grams, 5000))  # От 1г до 5кг
                 
                 valid_dishes.append({
                     'name': name,
                     'calories': calories,
                     'protein': protein,
                     'fat': fat,
-                    'carbs': carbs
+                    'carbs': carbs,
+                    'grams': grams
                 })
             
             if DEBUG:
@@ -274,7 +277,8 @@ class AIService:
                     'calories': 300,
                     'protein': 12,
                     'fat': 8,
-                    'carbs': 40
+                    'carbs': 40,
+                    'grams': 150
                 })
         
         return dishes
@@ -309,7 +313,8 @@ class AIService:
                     "calories": entry['calories'],
                     "protein": entry['protein'],
                     "fat": entry['fat'],
-                    "carbs": entry['carbs']
+                    "carbs": entry['carbs'],
+                    "grams": entry['grams']
                 })
             
             original_json = json.dumps({"dishes": original_dishes}, ensure_ascii=False)
@@ -442,19 +447,22 @@ class AIService:
                 protein = round(float(dish.get('protein', 10)))
                 fat = round(float(dish.get('fat', 10)))
                 carbs = round(float(dish.get('carbs', 40)))
+                grams = round(float(dish.get('grams', 100)))
                 
                 # Ограничиваем разумные пределы
                 calories = max(0, min(calories, 2000))
                 protein = max(0, min(protein, 100))
                 fat = max(0, min(fat, 100))
                 carbs = max(0, min(carbs, 200))
+                grams = max(1, min(grams, 5000))  # От 1г до 5кг
                 
                 valid_dishes.append({
                     'name': name,
                     'calories': calories,
                     'protein': protein,
                     'fat': fat,
-                    'carbs': carbs
+                    'carbs': carbs,
+                    'grams': grams
                 })
             
             # Проверяем, что количество блюд совпадает

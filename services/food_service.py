@@ -93,7 +93,8 @@ class FoodService:
                 calories=updated_dish['calories'],
                 protein=updated_dish['protein'],
                 fat=updated_dish['fat'],
-                carbs=updated_dish['carbs']
+                carbs=updated_dish['carbs'],
+                grams=updated_dish['grams']
             )
             
             if not success:

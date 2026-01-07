@@ -17,12 +17,13 @@ def save_food_entries(user_id: int, day_id: int, dishes: List[Dict[str, Any]]) -
         for dish in dishes:
             cursor.execute('''
                 INSERT INTO food_entries 
-                (user_id, day_id, dish_name, calories, protein, fat, carbs)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (user_id, day_id, dish_name, calories, protein, fat, carbs, grams)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 user_id, day_id, 
                 dish['name'], dish['calories'], 
-                dish['protein'], dish['fat'], dish['carbs']
+                dish['protein'], dish['fat'], dish['carbs'],
+                dish['grams']
             ))
             saved_ids.append(cursor.lastrowid)
         
@@ -64,7 +65,7 @@ def get_food_entries_for_day(user_id: int, day_id: int) -> List[tuple]:
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT id, dish_name, calories, protein, fat, carbs
+            SELECT id, dish_name, calories, protein, fat, carbs, grams
             FROM food_entries 
             WHERE user_id = ? AND day_id = ?
             ORDER BY created_at
@@ -129,7 +130,7 @@ def get_food_entry_by_id(entry_id: int, user_id: int) -> Optional[Dict[str, Any]
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT id, user_id, day_id, dish_name, calories, protein, fat, carbs
+            SELECT id, user_id, day_id, dish_name, calories, protein, fat, carbs, grams
             FROM food_entries 
             WHERE id = ? AND user_id = ?
         ''', (entry_id, user_id))
@@ -144,7 +145,8 @@ def get_food_entry_by_id(entry_id: int, user_id: int) -> Optional[Dict[str, Any]
                 'calories': entry[4],
                 'protein': entry[5],
                 'fat': entry[6],
-                'carbs': entry[7]
+                'carbs': entry[7],
+                'grams': entry[8]
             }
         return None
     except sqlite3.Error as e:
@@ -162,7 +164,8 @@ def update_food_entry(
     calories: int,
     protein: int,
     fat: int,
-    carbs: int
+    carbs: int,
+    grams: int = 100
 ) -> bool:
     """Обновление записи о еде"""
     try:
@@ -171,9 +174,9 @@ def update_food_entry(
         
         cursor.execute('''
             UPDATE food_entries 
-            SET dish_name = ?, calories = ?, protein = ?, fat = ?, carbs = ?
+            SET dish_name = ?, calories = ?, protein = ?, fat = ?, carbs = ?, grams = ?
             WHERE id = ? AND user_id = ?
-        ''', (dish_name, calories, protein, fat, carbs, entry_id, user_id))
+        ''', (dish_name, calories, protein, fat, carbs, grams, entry_id, user_id))
         
         if cursor.rowcount == 0:
             return False

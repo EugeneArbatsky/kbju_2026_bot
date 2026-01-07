@@ -73,9 +73,23 @@ def init_database():
                 protein INTEGER DEFAULT 10,
                 fat INTEGER DEFAULT 10,
                 carbs INTEGER DEFAULT 10,
+                grams INTEGER DEFAULT 100,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (day_id) REFERENCES days (id)
             )
+        ''')
+        
+        # Миграция: добавляем поле grams если его нет
+        try:
+            cursor.execute('ALTER TABLE food_entries ADD COLUMN grams INTEGER DEFAULT 100')
+        except sqlite3.OperationalError:
+            # Поле уже существует, игнорируем ошибку
+            pass
+        
+        # Обновляем существующие записи без граммов на значение по умолчанию
+        cursor.execute('''
+            UPDATE food_entries SET grams = 100 
+            WHERE grams IS NULL
         ''')
         
         # Индексы для быстрого поиска
