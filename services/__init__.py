@@ -8,9 +8,11 @@
 from .food_service import FoodService
 from .day_service import DayService
 from .user_service import UserService
+from .speech_service import SpeechService
 
 __all__ = [
     'FoodService',
     'DayService',
     'UserService',
+    'SpeechService',
 ]

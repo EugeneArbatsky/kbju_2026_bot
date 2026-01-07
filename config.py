@@ -13,6 +13,9 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 # GigaChat API (Authorization Key из кабинета)
 GIGACHAT_AUTH_KEY = os.getenv('GIGACHAT_AUTH_KEY')
 
+# SaluteSpeech API (Authorization Key из кабинета)
+SALUTEspeech_API_KEY = os.getenv('SALUTEspeech_API_KEY')
+
 # Настройки AI
 AI_TIMEOUT = 30  # секунд
 
@@ -25,3 +28,6 @@ if not TELEGRAM_TOKEN:
 
 if not GIGACHAT_AUTH_KEY:
     print("⚠️  GIGACHAT_AUTH_KEY не установлен, AI будет работать в режиме заглушки")
+
+if not SALUTEspeech_API_KEY:
+    print("⚠️  SALUTEspeech_API_KEY не установлен, распознавание речи будет недоступно")

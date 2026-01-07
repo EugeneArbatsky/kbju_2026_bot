@@ -81,9 +81,12 @@ class DefaultSession(BaseSession):
         return False
     
     async def handle_voice(self, update: Update, context: CallbackContext) -> bool:
-        """В дефолтной сессии голосовые сообщения пока не обрабатываются"""
-        # TODO: Реализовать обработку голосовых сообщений в будущем
-        return False
+        """Обрабатывает голосовое сообщение о еде"""
+        # Импортируем здесь, чтобы избежать циклических зависимостей
+        from handlers.media import handle_voice_message
+        
+        await handle_voice_message(update, context)
+        return True
 
 
 class EditingSession(BaseSession):
